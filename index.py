@@ -1,11 +1,22 @@
 import urllib.request
 from bs4 import BeautifulSoup
+import csv
 
 MAIN_URL = 'http://www.ratingruneta.ru/web/krasnodar/'
+
+def save(studios, path):
+    with open(path, 'w', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
+
+        writer.writerow(('Название вебстудии', 'Выполнено проектов', 'Рейтинг'))
+
+        for item in studios:
+            writer.writerow((item['name'], item['projects'], item['rate']))
 
 def get_html(url):
     response = urllib.request.urlopen(url)
     return response.read()
+
 
 def parse(html):
     soup = BeautifulSoup(html, 'html.parser')
@@ -26,7 +37,16 @@ def parse(html):
     return web_studios
 
 def main():
-    print(parse(get_html(MAIN_URL)))
+    studios = parse(get_html(MAIN_URL))
+    count_items = len(studios)
+    #for page in range(0, count_items-1):
+        #print('Выполняется парсинг %d%%' % (page / count_items * 100))
+        #print((parse(get_html(MAIN_URL)))[page]['link'])
+
+    #print((parse(get_html(MAIN_URL)))[0]['link'])
+
+    save(studios, 'studios_list.csv')
+
 
 if __name__ == '__main__':
     main()
