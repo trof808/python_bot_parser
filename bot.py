@@ -1,7 +1,7 @@
 import telebot
 from telebot import types
-import index
-import json
+import avito
+import config
 
 URL = 'https://www.avito.ru/krasnodar'
 
@@ -10,7 +10,7 @@ buttons = {
     'Дома': '/doma_dachi_kottedzhi'
 }
 
-TOKEN = '303092094:AAFdpjNi3EO-Utc5A598Mo5kcd4CwlWH9cc'
+TOKEN = config.TOKEN
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -25,12 +25,12 @@ def start(message):
 def hello(message):
     msg = message.text
     url = URL + buttons[msg]
-    result = index.parse(index.get_html(url))[:10]
+    result = avito.parse(avito.get_html(url))[:10]
 
     for item in result:
         bot.send_message(
             message.chat.id,
-            '{price} {link}'.format(price=item['price'], link=item['link'])
+            '{price} \n {link}'.format(price=item['price'], link=item['link'])
         )
 
 
