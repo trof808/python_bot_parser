@@ -19,7 +19,11 @@ def parse(html):
 
     for item in items:
         name = item.find('div', class_='description').find('h3', class_='item-description-title').a.get_text()
+
         price = item.find('div', class_='description').find('div', class_='about').contents[0]
+
+
+
         link = name = item.find('div', class_='description').find('h3', class_='item-description-title').a.get('href')
         link = 'https://www.avito.ru' + link
         arrItem.append({
