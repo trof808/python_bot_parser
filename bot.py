@@ -45,7 +45,6 @@ def start(message):
 def stepTwo(message):
     msg = message.text
     custom_request['1'] = msg
-    custom_url = URL + buttons[msg]
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(*[types.KeyboardButton(name) for name in ['Купить', 'Снять', 'Показать объявления']])
@@ -59,7 +58,10 @@ def stepThree(message):
     if(message.text == 'Показать объявления'):
         showResults(message)
 
+##Покзать результат
 def showResults(message):
+
+    ##Информаци о запросе
     info_msg = 'По Вашему запросу: \n'
     for item in custom_request:
         info_msg = info_msg + item + ': ' + custom_request[item] + '\n'
@@ -67,13 +69,22 @@ def showResults(message):
 
     info_msg = info_msg + 'Было найдено'
 
+
     bot.send_message(
         message.chat.id,
         info_msg
     )
 
-    result = avito.parse(avito.get_html(custom_url))[:10]
+    ##Парсим первую страницу по  URL
+    result = avito.parse(avito.get_html(custom_url))
 
+    #Парсим 2 и 3 страницы
+    # for page in range(2, 4):
+    #     result2 = avito.parse(avito.get_html(custom_url + '?p=' + str(page)))
+    #     for item in result2:
+    #         result.append(item)
+
+    ##Выводим результаты запроса
     for item in result:
         bot.send_message(
             message.chat.id,
