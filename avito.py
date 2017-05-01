@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 
-MAIN_URL = 'https://www.avito.ru/krasnodar/nedvizhimost'
+MAIN_URL = 'https://www.avito.ru'
 
 def get_html(url):
     response = requests.get(url)
@@ -32,8 +32,28 @@ def parse(html):
 
     return arrItem
 
+def parseLocation(html):
+    soup = BeautifulSoup(html, 'html.parser')
+
+    arrCities = []
+    objCities = {}
+
+    tables = soup.find_all('div', class_='cities')
+    for table in tables:
+        cities = table.find_all('a')
+        for city in cities:
+            arrCities.append(city)
+
+    for item in range(0, len(arrCities)):
+        name = arrCities[item].get_text()
+        link = arrCities[item].get('href')
+        objCities[name] = link
+
+    return objCities
+
+
 def main():
-    print(parse(get_html(MAIN_URL)))
+    print(parseLocation(get_html(MAIN_URL)))
 
 if __name__ == '__main__':
     main()
