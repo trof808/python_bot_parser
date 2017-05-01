@@ -45,8 +45,8 @@ def parseLocation(html):
             arrCities.append(city)
 
     for item in range(0, len(arrCities)):
-        name = arrCities[item].get_text()
-        link = arrCities[item].get('href')
+        name = arrCities[item].get_text().strip('\n ')
+        link = 'https:' + arrCities[item].get('href')
         objCities[name] = link
 
     return objCities
