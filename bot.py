@@ -2,9 +2,12 @@ import telebot
 from telebot import types
 import avito
 import config
+import bd
 
-URL = 'https://www.avito.ru'
+db = bd.db
 
+URL = ''
+custom_url = []
 custom_request = {}
 
 buttons = {
@@ -22,8 +25,6 @@ options = {
 }
 
 result = []
-
-objCities = avito.parseLocation(avito.get_html(URL))
 
 
 TOKEN = config.TOKEN
@@ -43,14 +44,28 @@ def stepOne(message, info='Введите ваш город'):
 
 
 def stepTwo(message):
+    arrCities = bd.getCitiesFromDb()
 
     city = message.text
 
-    cityStatus = objCities.get(city, 'Нет такого города')
-    if(cityStatus == 'Нет такого города'):
-        info = cityStatus + '\n' + 'Введите город заного'
+    #Проверяет есть ли в массиве arrCities введенный город, если его нет, то перезаписываем переменную city
+    try:
+        arrCities.index(city)
+    except:
+        city = 'Нет такого города'
+
+    if(city == 'Нет такого города'):
+        info = city + '\n' + 'Введите город заного'
         stepOne(message, info)
     else:
+        ins = db.prepare("INSERT INTO task_table (user_id) VALUES ($1)")
+
+        ins(message.chat.id)
+
+        cityLink = db.prepare('SELECT link FROM city WHERE name = $1')
+        getCityLink = cityLink(city)
+        custom_url.append(getCityLink[0][0])
+
         custom_request['1'] = city
 
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -64,44 +79,65 @@ def stepTwo(message):
 
 def stepThree(message):
     msg = message.text
+
     custom_request['2'] = msg
+
+    realtyLink = db.prepare('SELECT link FROM realty WHERE name = $1')
+    getRealtyLink = realtyLink(msg)
+    custom_url.append(getRealtyLink[0][0])
+
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(*[types.KeyboardButton(name) for name in ['Купить', 'Снять', 'Показать объявления']])
     sent = bot.send_message(message.chat.id, 'Выберите услугу', reply_markup=keyboard)
 
-    bot.register_next_step_handler(sent, stepFour)
+    bot.register_next_step_handler(sent, actionStep)
 
+def actionStep(message):
+    msg = message.text
+    if(msg == 'Показать объявления'):
+        showResults(message)
+    else:
+        custom_request['3'] = msg
+        actionLink = db.prepare('SELECT link FROM action WHERE name = $1')
+        getActionLink = actionLink(msg)
+        custom_url.append(getActionLink[0][0])
+        print(''.join(custom_url))
 
+        if(msg == 'Купить'):
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            keyboard.add(*[types.KeyboardButton(name) for name in ['Укажите количество комнат', 'Показать объявления']])
+            sent = bot.send_message(message.chat.id, 'Выберите услугу', reply_markup=keyboard)
 
-def stepFour(message):
-    if(message.text == 'Показать объявления'):
+            bot.register_next_step_handler(sent, countRooms)
+
+def countRooms(message):
+    msg = message.text
+    if(msg == 'Показать объявления'):
         showResults(message)
 
 ##Покзать результат
 def showResults(message):
-    custom_url = URL
-
-
     ##Информаци о запросе
     info_msg = 'По Вашему запросу: \n'
     for item in custom_request:
         info_msg = info_msg + item + ': ' + custom_request[item] + '\n'
-        if (item == '1'):
-            custom_url = objCities[custom_request[item]]
-        else:
-            custom_url = custom_url + buttons[custom_request[item]]
 
     info_msg = info_msg + 'Было найдено'
 
-    print(custom_url)
+    URL = ''.join(custom_url)
+
+    insertUrl = db.prepare("UPDATE task_table SET link = $1 WHERE user_id = $2 AND active = false")
+    insertUrl(URL, message.chat.id)
+
     bot.send_message(
         message.chat.id,
         info_msg
     )
 
+
     ##Парсим первую страницу по  URL
-    parse = avito.parse(avito.get_html(custom_url))
+    parse = avito.parse(avito.get_html(URL))
 
     for item in parse:
         result.append(item)
@@ -127,9 +163,6 @@ def showResults(message):
 
     afterShow(message)
 
-    # bot.register_next_step_handler(sent, afterShow)
-
-
 
 def afterShow(message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -148,7 +181,39 @@ def createNew(message):
     options['start'] = 0
     options['end'] = 5
     result.clear()
-    stepOne(message)
+    custom_url.clear()
+    custom_request.clear()
+
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add(*[types.KeyboardButton(name) for name in ['Да', 'Нет']])
+    sent = bot.send_message(message.chat.id, 'Вы нашли, что хотели?', reply_markup=keyboard)
+
+    bot.register_next_step_handler(sent, findRight)
+
+def findRight(message):
+    msg = message.text
+
+    if(msg == 'Да'):
+        deleteReq = db.prepare("DELETE FROM task_table WHERE user_id = $1 AND active = false")
+        deleteReq(message.chat.id)
+        stepOne(message)
+    else:
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add(*[types.KeyboardButton(name) for name in ['Да', 'Нет']])
+        sent = bot.send_message(message.chat.id, 'Хотите ли вы получать уведомления по вашему последнему запросу?', reply_markup=keyboard)
+
+        bot.register_next_step_handler(sent, pushActive)
+
+def pushActive(message):
+    msg = message.text
+    if(msg == 'Нет'):
+        deleteReq = db.prepare("DELETE FROM task_table WHERE user_id = $1 AND active = false")
+        deleteReq(message.chat.id)
+        stepOne(message)
+    else:
+        setActive = db.prepare("UPDATE task_table SET active = true WHERE user_id = $1 AND active = false")
+        setActive(message.chat.id)
+        stepOne(message)
 
 def showMore(message):
     part = result[options['start']:options['end']]
