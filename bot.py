@@ -102,16 +102,45 @@ def actionStep(message):
         actionLink = db.prepare('SELECT link FROM action WHERE name = $1')
         getActionLink = actionLink(msg)
         custom_url.append(getActionLink[0][0])
-        print(''.join(custom_url))
+        # print(''.join(custom_url))
 
         if(msg == 'Купить'):
             keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            keyboard.add(*[types.KeyboardButton(name) for name in ['Укажите количество комнат', 'Показать объявления']])
+            keyboard.add(*[types.KeyboardButton(name) for name in ['Указать количество комнат', 'Показать объявления']])
             sent = bot.send_message(message.chat.id, 'Выберите услугу', reply_markup=keyboard)
 
             bot.register_next_step_handler(sent, countRooms)
 
 def countRooms(message):
+    msg = message.text
+    if(msg == 'Показать объявления'):
+        showResults(message)
+    else:
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add(*[types.KeyboardButton(name) for name in ['Студии']])
+        sent = bot.send_message(message.chat.id, 'Укажите количество комнат цифрой от 1 до 9 или выберите студии из предложенного варианта', reply_markup=keyboard)
+
+        bot.register_next_step_handler(sent, countRoomsNext)
+
+def countRoomsNext(message):
+    msg = message.text
+    if(msg == 'Студии'):
+        roomUrl = '/studii'
+    else:
+        roomUrl = '/'+msg+'-komnatnye'
+        msg = 'Количество комнат ' + msg
+
+    custom_request['4'] = msg
+    custom_url.append(roomUrl)
+    print(''.join(custom_url))
+
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add(*[types.KeyboardButton(name) for name in ['Вторичка', 'Новостройка', 'Показать объявления']])
+    sent = bot.send_message(message.chat.id, 'Выберите вид объекта или можете посмотреть объявления по собранному запросу', reply_markup=keyboard)
+
+    bot.register_next_step_handler(sent, vidObjOrShow)
+
+def vidObjOrShow(message):
     msg = message.text
     if(msg == 'Показать объявления'):
         showResults(message)
@@ -228,4 +257,4 @@ def showMore(message):
     afterShow(message)
 
 if __name__ == '__main__':
-    bot.polling()
+    bot.polling(none_stop=True)
