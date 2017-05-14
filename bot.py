@@ -183,7 +183,16 @@ def areaChooseShow(message):
         custom_url.append(areaUrl)
         print(''.join(custom_url))
 
-        
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add(*[types.KeyboardButton(name) for name in ['Показать объявления']])
+        sent = bot.send_message(message.chat.id, 'Введите числом приблизительное количество квадратных метров или можете посмотреть объявления', reply_markup=keyboard)
+
+        bot.register_next_step_handler(sent, amountMetres)
+
+def amountMetres(message):
+    msg = message.text
+    if(msg == 'Показать объявления'):
+        showResults(message)
 
 ##Покзать результат
 def showResults(message):
