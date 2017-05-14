@@ -3,6 +3,7 @@ from telebot import types
 import avito
 import config
 import bd
+import re
 
 db = bd.db
 
@@ -43,6 +44,12 @@ bot = telebot.TeleBot(TOKEN)
 ##Функция, которая обрабатывает команду /start
 @bot.message_handler(commands=['start'])
 def stepOne(message, info='Введите ваш город'):
+    options['start'] = 0
+    options['end'] = 5
+    result.clear()
+    custom_url.clear()
+    custom_request.clear()
+
     sent = bot.send_message(
         message.chat.id,
         info
@@ -112,18 +119,30 @@ def actionStep(message):
         custom_url.append(getActionLink[0][0])
         # print(''.join(custom_url))
 
-        if(msg == 'Купить'):
+        if(custom_request.get('realtyType') == 'Дома'):
             keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            keyboard.add(*[types.KeyboardButton(name) for name in ['Указать количество комнат', 'Показать объявления']])
-            sent = bot.send_message(message.chat.id, 'Выберите услугу', reply_markup=keyboard)
+            keyboard.add(*[types.KeyboardButton(name) for name in ['Показать объявления']])
+            sent = bot.send_message(message.chat.id, 'Для этого типа недвижимости пока больше нет параметров для выбора, но мы над этим работаем. А пока вы можете посмотреть объйвления по заданному запросу', reply_markup=keyboard)
 
-            bot.register_next_step_handler(sent, countRooms)
-        if(msg == 'Снять'):
-            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            keyboard.add(*[types.KeyboardButton(name) for name in ['На длительный срок', 'Посуточно', 'Показать объявления']])
-            sent = bot.send_message(message.chat.id, 'Выберите срок на который хотите снять или можете посмотреть объявления по собранному запросу', reply_markup=keyboard)
+            bot.register_next_step_handler(sent, houseChoose)
+        else:
+            if(msg == 'Купить'):
+                keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                keyboard.add(*[types.KeyboardButton(name) for name in ['Указать количество комнат', 'Показать объявления']])
+                sent = bot.send_message(message.chat.id, 'Выберите услугу', reply_markup=keyboard)
 
-            bot.register_next_step_handler(sent, termRent)
+                bot.register_next_step_handler(sent, countRooms)
+            if(msg == 'Снять'):
+                keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                keyboard.add(*[types.KeyboardButton(name) for name in ['На длительный срок', 'Посуточно', 'Показать объявления']])
+                sent = bot.send_message(message.chat.id, 'Выберите срок на который хотите снять или можете посмотреть объявления по собранному запросу', reply_markup=keyboard)
+
+                bot.register_next_step_handler(sent, termRent)
+
+def houseChoose(message):
+    msg = message.text
+    if(msg == 'Показать объявления'):
+        showResults(message)
 
 def termRent(message):
     msg = message.text
@@ -226,6 +245,37 @@ def amountMetres(message):
     msg = message.text
     if(msg == 'Показать объявления'):
         showResults(message)
+    else:
+        custom_request['metres'] = msg
+
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add(*[types.KeyboardButton(name) for name in ['Показать объявления', 'Посмотреть запрос', 'Создать новый запрос']])
+        sent = bot.send_message(message.chat.id, 'Вы ввели все возможные параметры. Теперь вы можете мосмотреть объявления по вашему запросу, посмотреть запрос, который вы ввели или создать новый запрос. Выберите нужное действие ниже', reply_markup=keyboard)
+
+        bot.register_next_step_handler(sent, allOver)
+
+def allOver(message):
+    msg = message.text
+    if(msg == 'Показать объявления'):
+        showResults(message)
+    elif(msg == 'Посмотреть запрос'):
+        showRequest(message)
+    elif(msg == 'Создать новый запрос'):
+        stepOne(message)
+
+def showRequest(message):
+    info_msg = 'Вы ввели следующие параметры: \n'
+    for item in custom_request:
+        info_msg = info_msg + '- ' + custom_request[item] + '\n'
+
+    info_msg = info_msg + 'Если вы где-то ошиблись или введенные параметры вас не устраивают, вы можете создать новый запрос или, если все устраиает, то можете посмотреть объявления по вашему запросу'
+    
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add(*[types.KeyboardButton(name) for name in ['Показать объявления', 'Посмотреть запрос', 'Создать новый запрос']])
+    sent = bot.send_message(message.chat.id, info_msg, reply_markup=keyboard)
+
+    bot.register_next_step_handler(sent, allOver)
+
 
 ##Покзать результат
 def showResults(message):
@@ -246,33 +296,37 @@ def showResults(message):
         info_msg
     )
 
-
     ##Парсим первую страницу по  URL
     parse = avito.parse(avito.get_html(URL))
 
-    for item in parse:
-        result.append(item)
+    if(custom_request.has_key('metres')):
+        meters = custom_request['meters']
+        pattern = 
+
+        for item in parse:
+
+            result.append(item)
 
 
-    part = result[:options['end']]
-    options['start'] = options['end']
-    options['end'] = options['end'] + 5
+        part = result[:options['end']]
+        options['start'] = options['end']
+        options['end'] = options['end'] + 5
 
 
-    #Парсим 2 и 3 страницы
-    # for page in range(2, 4):
-    #     result2 = avito.parse(avito.get_html(custom_url + '?p=' + str(page)))
-    #     for item in result2:
-    #         result.append(item)
+        #Парсим 2 и 3 страницы
+        # for page in range(2, 4):
+        #     result2 = avito.parse(avito.get_html(custom_url + '?p=' + str(page)))
+        #     for item in result2:
+        #         result.append(item)
 
-    ##Выводим результаты запроса
-    for item in part:
-        bot.send_message(
-            message.chat.id,
-            '{price} \n {link}'.format(price=item['price'], link=item['link'])
-        )
+        ##Выводим результаты запроса
+        for item in part:
+            bot.send_message(
+                message.chat.id,
+                '{price} \n {link}'.format(price=item['price'], link=item['link'])
+            )
 
-    afterShow(message)
+        afterShow(message)
 
 
 def afterShow(message):
@@ -289,11 +343,6 @@ def chooseAction(message):
         createNew(message)
 
 def createNew(message):
-    options['start'] = 0
-    options['end'] = 5
-    result.clear()
-    custom_url.clear()
-    custom_request.clear()
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(*[types.KeyboardButton(name) for name in ['Да', 'Нет']])
