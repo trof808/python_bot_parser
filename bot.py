@@ -212,7 +212,7 @@ def vidObjOrShow(message):
         custom_request['typeBuild'] = 'Вид объекта ' + msg
         custom_url.append(objUrl)
         print(''.join(custom_url))
-        if(custom_request['1'] == 'Краснодар'):
+        if(custom_request['city'] == 'Краснодар'):
             keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
             keyboard.add(*[types.KeyboardButton(name) for name in ['Западный', 'Карасунский', 'Прикубанский', 'Центральный', 'Старокорсунский', 'Показать объявления']])
             sent = bot.send_message(message.chat.id, 'Выберите нужный район или можете посмотреть объявления', reply_markup=keyboard)
@@ -299,34 +299,45 @@ def showResults(message):
     ##Парсим первую страницу по  URL
     parse = avito.parse(avito.get_html(URL))
 
-    if(custom_request.has_key('metres')):
-        meters = custom_request['meters']
-        pattern = 
+    metres = custom_request.get('metres', None)
+
+    if(metres != None):
+        meters = int(custom_request['metres'])
+        # search_str = '[%s - %s]' % (str(meters-10), str(meters+10))
+        search_str = r'[0-9]{1,2} м'
+        # regx = re.compile(search_str)
 
         for item in parse:
-
+            print(item['title'])
+            if re.search(search_str, item['title']) is not None:
+                rightStr = re.findall(search_str, item['title'])[0]
+                numInTitle = int(rightStr.split(' ')[0])
+                if(numInTitle <= meters+10 and numInTitle >= meters-10):
+                    print(True)
+                    result.append(item)
+    else:
+        for item in parse:
             result.append(item)
 
+    part = result[:options['end']]
+    options['start'] = options['end']
+    options['end'] = options['end'] + 5
 
-        part = result[:options['end']]
-        options['start'] = options['end']
-        options['end'] = options['end'] + 5
 
+    #Парсим 2 и 3 страницы
+    # for page in range(2, 4):
+    #     result2 = avito.parse(avito.get_html(custom_url + '?p=' + str(page)))
+    #     for item in result2:
+    #         result.append(item)
 
-        #Парсим 2 и 3 страницы
-        # for page in range(2, 4):
-        #     result2 = avito.parse(avito.get_html(custom_url + '?p=' + str(page)))
-        #     for item in result2:
-        #         result.append(item)
+    ##Выводим результаты запроса
+    for item in part:
+        bot.send_message(
+            message.chat.id,
+            '{price} \n {link}'.format(price=item['price'], link=item['link'])
+        )
 
-        ##Выводим результаты запроса
-        for item in part:
-            bot.send_message(
-                message.chat.id,
-                '{price} \n {link}'.format(price=item['price'], link=item['link'])
-            )
-
-        afterShow(message)
+    afterShow(message)
 
 
 def afterShow(message):

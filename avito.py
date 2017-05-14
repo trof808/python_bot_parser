@@ -22,7 +22,7 @@ def parse(html):
 
 
 
-        link = name = item.find('div', class_='description').find('h3', class_='item-description-title').a.get('href')
+        link = item.find('div', class_='description').find('h3', class_='item-description-title').a.get('href')
         link = 'https://www.avito.ru' + link
         arrItem.append({
             'title': name,
