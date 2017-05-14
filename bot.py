@@ -74,7 +74,7 @@ def stepTwo(message):
         getCityLink = cityLink(city)
         custom_url.append(getCityLink[0][0])
 
-        custom_request['1'] = city
+        custom_request['city'] = city
 
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
         keyboard.add(*[types.KeyboardButton(name) for name in ['Квартиры', 'Дома', 'Комнаты', 'Коммерция']])
@@ -88,7 +88,7 @@ def stepTwo(message):
 def stepThree(message):
     msg = message.text
 
-    custom_request['2'] = msg
+    custom_request['realtyType'] = msg
 
     realtyLink = db.prepare('SELECT link FROM realty WHERE name = $1')
     getRealtyLink = realtyLink(msg)
@@ -106,7 +106,7 @@ def actionStep(message):
     if(msg == 'Показать объявления'):
         showResults(message)
     else:
-        custom_request['3'] = msg
+        custom_request['service'] = msg
         actionLink = db.prepare('SELECT link FROM action WHERE name = $1')
         getActionLink = actionLink(msg)
         custom_url.append(getActionLink[0][0])
@@ -118,6 +118,32 @@ def actionStep(message):
             sent = bot.send_message(message.chat.id, 'Выберите услугу', reply_markup=keyboard)
 
             bot.register_next_step_handler(sent, countRooms)
+        if(msg == 'Снять'):
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            keyboard.add(*[types.KeyboardButton(name) for name in ['На длительный срок', 'Посуточно', 'Показать объявления']])
+            sent = bot.send_message(message.chat.id, 'Выберите срок на который хотите снять или можете посмотреть объявления по собранному запросу', reply_markup=keyboard)
+
+            bot.register_next_step_handler(sent, termRent)
+
+def termRent(message):
+    msg = message.text
+    if(msg == 'Показать объявления'):
+        showResults(message)
+    else:
+        if(msg == 'На длительный срок'):
+            termUrl = '/na_dlitelnyy_srok'
+        elif(msg == 'Посуточно'):
+            termUrl = '/posutochno'
+
+    custom_request['term'] = 'Длительность ' + msg
+    custom_url.append(termUrl)
+
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add(*[types.KeyboardButton(name) for name in ['Студии']])
+    sent = bot.send_message(message.chat.id, 'Укажите количество комнат цифрой от 1 до 9 или выберите студии из предложенного варианта', reply_markup=keyboard)
+
+    bot.register_next_step_handler(sent, countRoomsNext)
+
 
 def countRooms(message):
     msg = message.text
@@ -138,14 +164,21 @@ def countRoomsNext(message):
         roomUrl = '/'+msg+'-komnatnye'
         msg = 'Количество комнат ' + msg
 
-    custom_request['4'] = msg
+    custom_request['rooms'] = msg
     custom_url.append(roomUrl)
 
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add(*[types.KeyboardButton(name) for name in ['Вторичка', 'Новостройка', 'Показать объявления']])
-    sent = bot.send_message(message.chat.id, 'Выберите вид объекта или можете посмотреть объявления по собранному запросу', reply_markup=keyboard)
+    if(custom_request.get('service') == 'Купить'):
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add(*[types.KeyboardButton(name) for name in ['Вторичка', 'Новостройка', 'Показать объявления']])
+        sent = bot.send_message(message.chat.id, 'Выберите вид объекта или можете посмотреть объявления по собранному запросу', reply_markup=keyboard)
 
-    bot.register_next_step_handler(sent, vidObjOrShow)
+        bot.register_next_step_handler(sent, vidObjOrShow)
+    elif(custom_request.get('service') == 'Снять'):
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add(*[types.KeyboardButton(name) for name in ['Западный', 'Карасунский', 'Прикубанский', 'Центральный', 'Старокорсунский', 'Показать объявления']])
+        sent = bot.send_message(message.chat.id, 'Выберите нужный район или можете посмотреть объявления', reply_markup=keyboard)
+
+        bot.register_next_step_handler(sent, areaChooseShow)
 
 def vidObjOrShow(message):
     msg = message.text
@@ -157,7 +190,7 @@ def vidObjOrShow(message):
         elif(msg == 'Новостройка'):
             objUrl = '/novostroyka'
 
-        custom_request['5'] = 'Вид объекта ' + msg
+        custom_request['typeBuild'] = 'Вид объекта ' + msg
         custom_url.append(objUrl)
         print(''.join(custom_url))
         if(custom_request['1'] == 'Краснодар'):
@@ -179,7 +212,7 @@ def areaChooseShow(message):
         showResults(message)
     else:
         areaUrl = krasnodarAreas[msg]
-        custom_request['6'] = 'Район ' + msg
+        custom_request['area'] = 'Район ' + msg
         custom_url.append(areaUrl)
         print(''.join(custom_url))
 
