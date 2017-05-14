@@ -19,6 +19,14 @@ buttons = {
     'Снять': '/sdam'
 }
 
+krasnodarAreas = {
+    'Западный': '?district=359',
+    'Карасунский': 'district=360',
+    'Прикубанский': '?district=361',
+    'Старокорсунский': '?district=547',
+    'Центральный': '?district=362'
+}
+
 options = {
     'start': 0,
     'end': 5
@@ -132,7 +140,6 @@ def countRoomsNext(message):
 
     custom_request['4'] = msg
     custom_url.append(roomUrl)
-    print(''.join(custom_url))
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(*[types.KeyboardButton(name) for name in ['Вторичка', 'Новостройка', 'Показать объявления']])
@@ -144,13 +151,46 @@ def vidObjOrShow(message):
     msg = message.text
     if(msg == 'Показать объявления'):
         showResults(message)
+    else:
+        if(msg == 'Вторичка'):
+            objUrl = '/vtorichka'
+        elif(msg == 'Новостройка'):
+            objUrl = '/novostroyka'
+
+        custom_request['5'] = 'Вид объекта ' + msg
+        custom_url.append(objUrl)
+        print(''.join(custom_url))
+        if(custom_request['1'] == 'Краснодар'):
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            keyboard.add(*[types.KeyboardButton(name) for name in ['Западный', 'Карасунский', 'Прикубанский', 'Центральный', 'Старокорсунский', 'Показать объявления']])
+            sent = bot.send_message(message.chat.id, 'Выберите нужный район или можете посмотреть объявления', reply_markup=keyboard)
+
+            bot.register_next_step_handler(sent, areaChooseShow)
+        else:
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            keyboard.add(*[types.KeyboardButton(name) for name in ['Показать объявления']])
+            sent = bot.send_message(message.chat.id, 'Районов вашего города пока нет в базе, но мы работаем над этим. Введите числом приблизительное количество квадратных метров или можете посмотреть объявления', reply_markup=keyboard)
+
+            bot.register_next_step_handler(sent, amountMetres)
+
+def areaChooseShow(message):
+    msg = message.text
+    if(msg == 'Показать объявления'):
+        showResults(message)
+    else:
+        areaUrl = krasnodarAreas[msg]
+        custom_request['6'] = 'Район ' + msg
+        custom_url.append(areaUrl)
+        print(''.join(custom_url))
+
+        
 
 ##Покзать результат
 def showResults(message):
     ##Информаци о запросе
     info_msg = 'По Вашему запросу: \n'
     for item in custom_request:
-        info_msg = info_msg + item + ': ' + custom_request[item] + '\n'
+        info_msg = info_msg + '- ' + custom_request[item] + '\n'
 
     info_msg = info_msg + 'Было найдено'
 
