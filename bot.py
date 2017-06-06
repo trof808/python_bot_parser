@@ -382,6 +382,8 @@ def pushActive(message):
         deleteReq(message.chat.id)
         stepOne(message)
     else:
+        deleteReq = db.prepare("DELETE FROM task_table WHERE user_id = $1 AND active = false")
+        deleteReq(message.chat.id)
         setActive = db.prepare("UPDATE task_table SET active = true WHERE user_id = $1 AND active = false")
         setActive(message.chat.id)
         stepOne(message)
@@ -397,6 +399,19 @@ def showMore(message):
         )
 
     afterShow(message)
+
+def getZn():
+    links = db.prepare("SELECT link FROM task_table WHERE active = true")
+    arrlink = []
+    for link in links:
+        for item in link:
+            arrlink.append(item)
+    return arrlink
+
+def main():
+    links = getZn()
+    for item in links:
+        print(item)
 
 if __name__ == '__main__':
     bot.polling(none_stop=True)
