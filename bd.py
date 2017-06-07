@@ -2,6 +2,11 @@ import postgresql
 import avito
 import telebot
 from telebot import types
+import config
+
+TOKEN = config.TOKEN
+
+bot = telebot.TeleBot(TOKEN)
 
 URL = 'https://www.avito.ru'
 

@@ -44,6 +44,8 @@ bot = telebot.TeleBot(TOKEN)
 ##Функция, которая обрабатывает команду /start
 @bot.message_handler(commands=['start'])
 def stepOne(message, info='Введите ваш город'):
+    deleteReq = db.prepare("DELETE FROM task_table WHERE user_id = $1 AND active = false")
+    deleteReq(message.chat.id)
     options['start'] = 0
     options['end'] = 5
     result.clear()
@@ -382,7 +384,7 @@ def pushActive(message):
         deleteReq(message.chat.id)
         stepOne(message)
     else:
-        deleteReq = db.prepare("DELETE FROM task_table WHERE user_id = $1 AND active = false")
+        deleteReq = db.prepare("DELETE FROM task_table WHERE user_id = $1 AND active = true")
         deleteReq(message.chat.id)
         setActive = db.prepare("UPDATE task_table SET active = true WHERE user_id = $1 AND active = false")
         setActive(message.chat.id)
